@@ -2,19 +2,20 @@
 
 # Mozilla firefox for loong64 continuous integration and release processes.
 
-CUR_FILENAME=`basename $0`
 PROJECT_PATH=`dirname $(readlink -f "$0")`
 
-FIREFOX_SOURCEDIR="mozilla-unified" # The directory for clone newer firefox source.
-PACKAGE_BAKS_DIRS="/mnt/chengyangyang/MyFirefoxBin/" # package备份路径
-
-LOG_LEVEL=""  # ERROR FILE INFO未实现
+FIREFOX_SOURCEDIR="mozilla-unified" # firefox source dir.
 LOG_CI_FILE="$PROJECT_PATH/$FIREFOX_SOURCEDIR/CI_LOG"
 
+LOCAL_BAKS_DIRS="$PROJECT_PATH/localPackage/" # Local package backed up.
+REMOTE_BAKS_DIRS="firefoxci@10.140.113.105:/mnt/firefoxci/package/" # Remote package backed up.
+
+
 BUILD_TYPE="Time"       # Time Patch
-BUILD_TIME_NUM=10        # s:second m:minute h:hour d:day
+BUILD_TIME_NUM=1h        # s:second m:minute h:hour d:day
 BUILD_PATCH_NUM=100
 
+ADMIN_MAIL_LIST="chengyangyang-hf@loongson.cn  18895622670@163.com"
 
 source start.sh
 

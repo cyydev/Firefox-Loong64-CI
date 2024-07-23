@@ -1,23 +1,31 @@
 #!/bin/bash
-ADMIN_MAIL="chengyangyang-hf@loongson.cn"
 
-# 待调试
 function logToMail() {
-  #cat $LOG_CI_FILE | mail -s "Firefox CI" chengyangyang-hf@loongson.cn
-  cat $LOG_CI_FILE | mail -s "Firefox CI" 18895622670@163.com
+  for receiver in $ADMIN_MAIL_LIST
+  do
+    cat $LOG_CI_FILE | mutt -s "Firefox CI" $receiver
+    if [ $? != 0 ]
+    then
+      cat $LOG_CI_FILE | mail -s "Firefox CI" $receiver
+      if [ $? != 0 ]
+      then
+        echo "[[$date  start.sh:$LINENO]]----Mail Failed！" | tee -a $LOG_CI_FILE
+        exit
+      fi
+    fi
+  done
 }
 
-# 当$3为ERROR时，代表发生错误，发邮件通知，退出CI系统
 function logPrint() {
   lineNo=$1
   date=`date +"%Y-%m-%d %H:%M:%S"`
   messages=$2  # message for print
   status=$3
-  echo "[[$date  start.sh:$lineNo]]----$messages" | tee -a $LOG_CI_FILE
+  echo -e "\n\033[41;37m [[$date  LINE:$lineNo]]----$messages \033[0m" | tee -a $LOG_CI_FILE
 
   if [ $status = "ERROR" ]
   then
-    logToMail  # 邮件通知
+    logToMail  # Inform by mail
     exit
   fi
 }
@@ -26,23 +34,34 @@ function testToolsInstalled(){
   hg version > /dev/null
   if [ $? != 0 ]
   then
-    sudo apt-get install libpython3.7-dev
-    sudo apt-get install sendmail #email when error.
+    sudo apt-get install python3.8 libpython3.8
+    if [ $? != 0 ]
+    then
+      # For python>=3.8 build from source.
+      sudo apt-get install libsqlite3-dev libreadline-dev libssl-dev  tk-dev libbz2-dev libgdbm-dev liblzma-dev libgdbm-compat-dev
+      sudo apt-get install terminator
+      logPrint $LINENO "Install Python>=3.8 failed!" "INFO"
+    fi
+    sudo apt-get install sendmail mutt # email tools.
     sudo hostname smtp.163.com
-    python3 -m pip install --user mercurial
+    sudo apt-get install libgtk-3-dev libstartup-notification0-dev libjpeg-dev libreadline-dev
+    sudo apt-get install libdbus-glib-1-dev libevent-dev libpulse-dev libasound2-dev yasm
+    sudo apt-get install llvm-dev libclang-dev clang lld nodejs fonts-dejima-mincho cmake
+    cargo install cbindgen
+    python3 -m pip install --user mercurial # mozilla firefox clone
     hg version
     if [ $? != 0 ]
     then
       logPrint $LINENO "Mercurial installed failed." "ERROR"
     fi
   else
+    sudo hostname smtp.163.com
     logPrint $LINENO "Mercurial tools check passed!" "INFO"
   fi
 }
 
 #在任何目录下都可执行，放在哪里呢？？？
 function updateFirefoxSrc(){
-  dirs
   if [ -d $FIREFOX_SOURCEDIR ]
   then
     logPrint $LINENO "Will Update Firefox Source..." "INFO"
@@ -101,8 +120,9 @@ function buildFirefox() {
 }
 
 function copyPackage() {
-  objdir=`uname -m`
-  objdir="$FIREFOX_SOURCEDIR/obj-$objdir*/dist"
+  # bin dir check.
+  arch=`uname -m`
+  objdir="$FIREFOX_SOURCEDIR/obj-$arch*/dist"
   echo $objdir
   if [ ! -d $objdir ]
   then
@@ -110,6 +130,7 @@ function copyPackage() {
   fi
 
   pushd $objdir
+    # package check.
     package_name=`ls | egrep ".tar.bz2"`
     if [ $? != 0 ]
     then
@@ -118,42 +139,51 @@ function copyPackage() {
     build_id=${package_name%tar.bz2*}
     build_id="${build_id}txt"
 
-    # saveas package. 在存储目录中新建一个目录，目录名用数字表示，以递增顺序
-    location_dir=`ls $PACKAGE_BAKS_DIRS | sort -n | tail -n 1`
+    # saveas package.
+    location_dir=`ls $LOCAL_BAKS_DIRS | sort -n | tail -n 1`
     location_dir=`expr $location_dir + 1`
-    location_dir="$PACKAGE_BAKS_DIRS$location_dir"
+    location_dir="$LOCAL_BAKS_DIRS$location_dir"
     mkdir -p $location_dir
     cp $package_name $location_dir
     cp $build_id $location_dir
+    if [ $? != 0 ]
+    then
+      logPrint $LINENO "Local Backed Up Failed. Please Check!" "ERROR"
+    fi
 
-    #获取版本号 以及 hg version
+    # Firefox-Version
     version_number=`bin/firefox --version`
-    echo $version_number
     version_number=${version_number#*Mozilla Firefox }
-    echo $version_number
 
+    # CommitID
     patch_number=`hg log -l 1`
     patch_number=${patch_number#*changeset: }
     patch_number=${patch_number:0:21}
-    maps_file="$PACKAGE_BAKS_DIRS/Maps"
+
+    #  write triple. "Dirs-Name Version  CommitID"
+    maps_file="$LOCAL_BAKS_DIRS/Maps"
     if [ ! -e $maps_file ]
     then
       touch $maps_file
     fi
-    # 目录名  版本号  commitID
     triple_info="${location_dir##*/}  $version_number  $patch_number"
     echo $triple_info >> $maps_file
-
     logPrint $LINENO "[[$triple_info]] have been backed up." "INFO"
-    logToMail  # 邮件通知
+
+    sshpass -p "firefoxci" scp -r $location_dir "$REMOTE_BAKS_DIRS$arch/"
+    sshpass -p "firefoxci" scp $maps_file "$REMOTE_BAKS_DIRS$arch/"
+    if [ $? != 0 ]
+    then
+      logPrint $LINENO "Remote Backed Up Failed. Please Check!" "ERROR"
+    fi
+    logPrint $LINENO "Remote have been backed up." "INFO"
+
+    logToMail  # Inform Admin this build success.
   popd
 }
 
-# 支持两种策略
-# 按时间,用于编译最新版firefox
-# 按patch数,用于编译旧版firefox
 function taskStartCondition() {
-  rm $LOG_CI_FILE # 删除CI日志，重新开启记录下一次构建日志
+  rm $LOG_CI_FILE # delete CI_LOG for next build.
 
   if [ $first_start = "TRUE" ]
   then
