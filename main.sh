@@ -25,7 +25,7 @@ source start.sh
 testToolsInstalled
 
 
-first_start="TRUE"
+first_start="TRUE"   # avoid sleep when first start.
 taskStartCondition
 while [ $? -eq 0 ]
 do

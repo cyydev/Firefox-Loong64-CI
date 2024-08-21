@@ -3,7 +3,7 @@
 function logToMail() {
   for receiver in $ADMIN_MAIL_LIST
   do
-    cat $LOG_CI_FILE | mutt -s "Firefox CI" $receiver
+    cat $LOG_CI_FILE | mail -s "Firefox CI" $receiver
     if [ $? != 0 ]
     then
       cat $LOG_CI_FILE | mail -s "Firefox CI" $receiver
@@ -21,7 +21,11 @@ function logPrint() {
   date=`date +"%Y-%m-%d %H:%M:%S"`
   messages=$2  # message for print
   status=$3
-  echo -e "\n\033[41;37m [[$date  LINE:$lineNo]]----$messages \033[0m" | tee -a $LOG_CI_FILE
+  # Loognix-serer 似乎不支持 "\033[41;37m", cat打开的文件中只要含有这些符号，
+  # 管道中的流会自动转存到一个文件，然后通过mail发送
+  #echo -e "\n\033[41;37m [[$date  LINE:$lineNo]]----$messages \033[0m" | tee -a $LOG_CI_FILE
+  echo -e "\n\033[41;37m [[$date  LINE:$lineNo]]----$messages \033[0m"
+  echo -e "\n[[$date  LINE:$lineNo]]----$messages" >> $LOG_CI_FILE
 
   if [ $status = "ERROR" ]
   then
@@ -39,7 +43,7 @@ function testToolsInstalled(){
     then
       # For python>=3.8 build from source.
       sudo apt-get install libsqlite3-dev libreadline-dev libssl-dev  tk-dev libbz2-dev libgdbm-dev liblzma-dev libgdbm-compat-dev
-      sudo apt-get install terminator
+      sudo apt-get install terminator sshpass
       logPrint $LINENO "Install Python>=3.8 failed!" "INFO"
     fi
     sudo apt-get install sendmail mutt # email tools.
@@ -67,6 +71,7 @@ function updateFirefoxSrc(){
     logPrint $LINENO "Will Update Firefox Source..." "INFO"
     cd $FIREFOX_SOURCEDIR
     hg pull
+    hg update
     cd ..
   else
     logPrint $LINENO "Not Clone Firefox Source, will cloneing..." "INFO"
@@ -161,14 +166,15 @@ function copyPackage() {
     patch_number=${patch_number:0:21}
 
     #  write triple. "Dirs-Name Version  CommitID"
-    maps_file="$LOCAL_BAKS_DIRS/Maps"
+    maps_file="${LOCAL_BAKS_DIRS}Maps"
     if [ ! -e $maps_file ]
     then
       touch $maps_file
     fi
-    triple_info="${location_dir##*/}  $version_number  $patch_number"
+    date=`date +"%Y-%m-%d %H:%M:%S"`
+    triple_info="${location_dir##*/}  $version_number  $patch_number   [$date]"
     echo $triple_info >> $maps_file
-    logPrint $LINENO "[[$triple_info]] have been backed up." "INFO"
+    logPrint $LINENO "[[$triple_info]] Local have been backed up." "INFO"
 
     sshpass -p "firefoxci" scp -r $location_dir "$REMOTE_BAKS_DIRS$arch/"
     sshpass -p "firefoxci" scp $maps_file "$REMOTE_BAKS_DIRS$arch/"
