@@ -71,7 +71,7 @@ function updateFirefoxSrc(){
     logPrint $LINENO "Will Update Firefox Source..." "INFO"
     cd $FIREFOX_SOURCEDIR
     hg pull
-    hg update
+    hg update release #使用release bookmark
     cd ..
   else
     logPrint $LINENO "Not Clone Firefox Source, will cloneing..." "INFO"
@@ -161,7 +161,9 @@ function copyPackage() {
     version_number=${version_number#*Mozilla Firefox }
 
     # CommitID
-    patch_number=`hg log -l 1`
+    patch_number=`hg id -i`
+    patch_number=${patch_number:0:10}
+    patch_number=`hg log -r ${patch_number}`
     patch_number=${patch_number#*changeset: }
     patch_number=${patch_number:0:21}
 

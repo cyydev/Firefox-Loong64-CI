@@ -48,3 +48,15 @@ taskStartCondition: 用于判断是否开启下一次构建。当前仅实现Tim
 ## 四, 问题说明
   1, 邮件功能不可用。
   答：可能需要设置白名单，如loongson@loongson-pc.mail.ntes53.netease.com, 这即在我的163邮箱发件人的显示
+
+  https://blog.csdn.net/u010848845/article/details/108601550
+
+
+## 四, 提醒
+如下patch，做包时使用xz而不是bzip2了，要注意。到时要修改脚本。
+```shell
+changeset:   847610:efdd71a3303c
+user:        Heitor Neiva <hneiva@mozilla.com>
+date:        Tue Nov 26 21:47:39 2024 +0000
+summary:     Bug 1710599 - Switch linux build archives to xz format r=releng-reviewers,taskgraph-reviewers,bhearsum,firefox-build-system-reviewers,glandium
+```
