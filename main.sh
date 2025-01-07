@@ -29,6 +29,8 @@ first_start="TRUE"   # avoid sleep when first start.
 taskStartCondition
 while [ $? -eq 0 ]
 do
+  printBuildSysInfo
+
   updateFirefoxSrc
   buildFirefox
   copyPackage

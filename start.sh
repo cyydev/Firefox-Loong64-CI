@@ -64,6 +64,26 @@ function testToolsInstalled(){
   fi
 }
 
+function printBuildSysInfo() {
+  ldd /usr/bin/ls | grep ld-linux-loongarch-lp64d
+  if [ $? == 0 ]
+  then
+    logPrint $LINENO "loongarch64 Abi2.0 Builds" "INFO"
+  fi
+
+  ldd /usr/bin/ls | grep ld.so.1
+  if [ $? == 0 ]
+  then
+    logPrint $LINENO "loongarch64 Abi1.0 Builds" "INFO"
+  fi
+
+  uname -m | grep x86_64
+  if [ $? == 0 ]
+  then
+    logPrint $LINENO "X86_64 Builds" "INFO"
+  fi
+}
+
 #在任何目录下都可执行，放在哪里呢？？？
 function updateFirefoxSrc(){
   if [ -d $FIREFOX_SOURCEDIR ]
@@ -71,7 +91,7 @@ function updateFirefoxSrc(){
     logPrint $LINENO "Will Update Firefox Source..." "INFO"
     cd $FIREFOX_SOURCEDIR
     hg pull
-    hg update release #使用release bookmark
+    hg update central #Use central bookmark可以更及时发现并解决问题
     cd ..
   else
     logPrint $LINENO "Not Clone Firefox Source, will cloneing..." "INFO"
@@ -136,12 +156,12 @@ function copyPackage() {
 
   pushd $objdir
     # package check.
-    package_name=`ls | egrep ".tar.bz2"`
+    package_name=`ls | egrep ".tar.xz"`
     if [ $? != 0 ]
     then
       logPrint $LINENO "Not found firefox package." "ERROR"
     fi
-    build_id=${package_name%tar.bz2*}
+    build_id=${package_name%tar.xz*}
     build_id="${build_id}txt"
 
     # saveas package.
@@ -177,6 +197,13 @@ function copyPackage() {
     triple_info="${location_dir##*/}  $version_number  $patch_number   [$date]"
     echo $triple_info >> $maps_file
     logPrint $LINENO "[[$triple_info]] Local have been backed up." "INFO"
+
+    # abi2.0 for loongarch64.
+    ldd /usr/bin/ls | grep ld-linux-loongarch-lp64d
+    if [ $? == 0 ]
+    then
+      arch="abi2_0_loongarch64"
+    fi
 
     sshpass -p "firefoxci" scp -r $location_dir "$REMOTE_BAKS_DIRS$arch/"
     sshpass -p "firefoxci" scp $maps_file "$REMOTE_BAKS_DIRS$arch/"
