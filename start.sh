@@ -154,6 +154,13 @@ function copyPackage() {
     logPrint $LINENO "firefox bin dirs not exist !!! Please check \"$objdir\"." "ERROR"
   fi
 
+  # abi2.0 for loongarch64.
+  ldd /usr/bin/ls | grep ld-linux-loongarch-lp64d
+  if [ $? == 0 ]
+  then
+    arch="abi2_0_loongarch64"
+  fi
+
   pushd $objdir
     # package check.
     package_name=`ls | egrep ".tar.xz"`
@@ -165,9 +172,18 @@ function copyPackage() {
     build_id="${build_id}txt"
 
     # saveas package.
-    location_dir=`ls $LOCAL_BAKS_DIRS | sort -n | tail -n 1`
+    if [ -d $LOCAL_BAKS_DIRS ]
+    then
+      location_dir=`ls $LOCAL_BAKS_DIRS | sort -n | tail -n 1`
+    else #从服务器获取当前已编译的firefox数量
+      mkdir $LOCAL_BAKS_DIRS
+      sshpass -p "firefoxci" scp "$REMOTE_BAKS_DIRS$arch/Maps" $LOCAL_BAKS_DIRS
+      location_dir=`tail -1 "$LOCAL_BAKS_DIRS/Maps"`
+      location_dir=${location_dir%% *}
+    fi
     location_dir=`expr $location_dir + 1`
     location_dir="$LOCAL_BAKS_DIRS$location_dir"
+
     mkdir -p $location_dir
     cp $package_name $location_dir
     cp $build_id $location_dir
@@ -197,13 +213,6 @@ function copyPackage() {
     triple_info="${location_dir##*/}  $version_number  $patch_number   [$date]"
     echo $triple_info >> $maps_file
     logPrint $LINENO "[[$triple_info]] Local have been backed up." "INFO"
-
-    # abi2.0 for loongarch64.
-    ldd /usr/bin/ls | grep ld-linux-loongarch-lp64d
-    if [ $? == 0 ]
-    then
-      arch="abi2_0_loongarch64"
-    fi
 
     sshpass -p "firefoxci" scp -r $location_dir "$REMOTE_BAKS_DIRS$arch/"
     sshpass -p "firefoxci" scp $maps_file "$REMOTE_BAKS_DIRS$arch/"
