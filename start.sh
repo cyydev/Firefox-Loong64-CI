@@ -237,7 +237,15 @@ function taskStartCondition() {
 
   if [ $BUILD_TYPE = "Time" ]
   then
+    #Build Cycle.
     sleep $BUILD_TIME_NUM
+
+    #Build Start Time in 0-1 o'clock.
+    cur_dateTime=`date +%H`
+    sleep_time=`expr 24 - $cur_dateTime`
+    sleep_time="${sleep_time}h"
+    sleep $sleep_time
+
     return 0 # 0 true
   else
     echo "Patch"

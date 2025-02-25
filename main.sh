@@ -12,7 +12,7 @@ REMOTE_BAKS_DIRS="firefoxci@10.140.113.105:/mnt/firefoxci/package/" # Remote pac
 
 
 BUILD_TYPE="Time"       # Time Patch
-BUILD_TIME_NUM=7d        # s:second m:minute h:hour d:day
+BUILD_TIME_NUM=6d        # s:second m:minute h:hour d:day
 BUILD_PATCH_NUM=100
 
 ADMIN_MAIL_LIST="chengyangyang-hf@loongson.cn  18895622670@163.com"
