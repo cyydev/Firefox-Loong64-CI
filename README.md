@@ -2,7 +2,12 @@
 
 ## 一, 如何运行
 
-./main.sh
+./main.sh [optional_arg]  
+optional_arg是个可选参数，当为buildnow时表示立即执行构建；其他情况会进入定时任务。
+
+定时任务：  
+1, 首次启动，会等到当日24点时触发构建。  
+2, 后续每隔6日会触发一次构建。  
 
 ## 二, 变量说明
 
@@ -46,7 +51,7 @@ taskStartCondition: 用于判断是否开启下一次构建。当前仅实现Tim
 ```
 
 ## 四, 问题说明
-  1, 邮件功能不可用。
+  1, 邮件功能不可用。  
   答：可能需要设置白名单，如loongson@loongson-pc.mail.ntes53.netease.com, 这即在我的163邮箱发件人的显示
 
   https://blog.csdn.net/u010848845/article/details/108601550

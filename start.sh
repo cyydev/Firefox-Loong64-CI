@@ -35,10 +35,10 @@ function logPrint() {
 }
 
 function testToolsInstalled(){
-  hg version > /dev/null
+  python3  --version > /dev/null
   if [ $? != 0 ]
   then
-    sudo apt-get install python3.8 libpython3.8
+    sudo apt-get install python3.12 libpython3.12
     if [ $? != 0 ]
     then
       # For python>=3.8 build from source.
@@ -52,15 +52,11 @@ function testToolsInstalled(){
     sudo apt-get install libdbus-glib-1-dev libevent-dev libpulse-dev libasound2-dev yasm
     sudo apt-get install llvm-dev libclang-dev clang lld nodejs fonts-dejima-mincho cmake
     cargo install cbindgen
-    python3 -m pip install --user mercurial # mozilla firefox clone
-    hg version
-    if [ $? != 0 ]
-    then
-      logPrint $LINENO "Mercurial installed failed." "ERROR"
-    fi
+    sudo hostname smtp.163.com
+    logPrint $LINENO "Build dependency installed completely !" "INFO"
   else
     sudo hostname smtp.163.com
-    logPrint $LINENO "Mercurial tools check passed!" "INFO"
+    logPrint $LINENO "PreBuild check passed!" "INFO"
   fi
 }
 
@@ -86,16 +82,16 @@ function printBuildSysInfo() {
 
 #在任何目录下都可执行，放在哪里呢？？？
 function updateFirefoxSrc(){
+  export https_proxy=10.140.113.103:20181
   if [ -d $FIREFOX_SOURCEDIR ]
   then
     logPrint $LINENO "Will Update Firefox Source..." "INFO"
     cd $FIREFOX_SOURCEDIR
-    hg pull
-    hg update central #Use central bookmark可以更及时发现并解决问题
+    git pull
     cd ..
   else
     logPrint $LINENO "Not Clone Firefox Source, will cloneing..." "INFO"
-    curl https://hg.mozilla.org/mozilla-central/raw-file/default/python/mozboot/bin/bootstrap.py -O
+    curl -L https://raw.githubusercontent.com/mozilla-firefox/firefox/refs/heads/main/python/mozboot/bin/bootstrap.py -O
     #需要安装Python3.8+才能执行bootstrap.py
     python3 bootstrap.py --no-interactive
     if [ $? != 0 ]
@@ -197,11 +193,7 @@ function copyPackage() {
     version_number=${version_number#*Mozilla Firefox }
 
     # CommitID
-    patch_number=`hg id -i`
-    patch_number=${patch_number:0:10}
-    patch_number=`hg log -r ${patch_number}`
-    patch_number=${patch_number#*changeset: }
-    patch_number=${patch_number:0:21}
+    patch_number=`git log -1 --pretty=format:%h`
 
     #  write triple. "Dirs-Name Version  CommitID"
     maps_file="${LOCAL_BAKS_DIRS}Maps"
@@ -231,12 +223,26 @@ function taskStartCondition() {
 
   if [ $first_start = "TRUE" ]
   then
-    first_start="FALSE"
-    return 0 # 0 true
+    if [ $build_now = "TRUE" ]
+    then
+      first_start="FALSE"
+      echo -e "\nBuild Now"
+      return 0 # 0 true
+    else
+      first_start="FALSE"
+      #Build Start Time in 0-1 o'clock.
+      cur_dateTime=`date +%H`
+      sleep_time=`expr 24 - $cur_dateTime`
+      sleep_time="${sleep_time}h"
+      echo -e "\nWaiting $sleep_time Hours To Start Building"
+      sleep $sleep_time
+      return 0 # 0 true
+    fi
   fi
 
   if [ $BUILD_TYPE = "Time" ]
   then
+    echo -e "\n\033[41;37m [[Waiting $BUILD_TIME_NUM For Next Building. ]] \033[0m"
     #Build Cycle.
     sleep $BUILD_TIME_NUM
 

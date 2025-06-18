@@ -4,8 +4,8 @@
 
 PROJECT_PATH=`dirname $(readlink -f "$0")`
 
-FIREFOX_SOURCEDIR="mozilla-unified" # firefox source dir.
-LOG_CI_FILE="$PROJECT_PATH/$FIREFOX_SOURCEDIR/CI_LOG"
+FIREFOX_SOURCEDIR="firefox" # firefox source dir.
+LOG_CI_FILE="$PROJECT_PATH/CI_LOG"
 
 LOCAL_BAKS_DIRS="$PROJECT_PATH/localPackage/" # Local package backed up.
 REMOTE_BAKS_DIRS="firefoxci@10.140.113.105:/mnt/firefoxci/package/" # Remote package backed up.
@@ -24,8 +24,20 @@ source start.sh
 
 testToolsInstalled
 
+# Controls whether to start compiling immediately.
+build_now="FALSE"
+if [ $# -eq 0 ]
+then
+  build_now="FALSE"
+else
+  if [ $1 = "buildnow" ]
+  then
+    build_now="TRUE"
+  fi
+fi
 
 first_start="TRUE"   # avoid sleep when first start.
+
 taskStartCondition
 while [ $? -eq 0 ]
 do
